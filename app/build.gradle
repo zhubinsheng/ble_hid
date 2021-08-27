@@ -1,0 +1,113 @@
+apply plugin: 'com.android.application'
+
+def loadSigningConfigs() {
+    def scFile = file('../Key/signing.properties')
+    if (scFile.canRead()) {
+        Properties properties = new Properties()
+        properties.load(new FileInputStream(scFile))
+        if (properties != null
+                && properties.containsKey('KEY_PATH')
+                && properties.containsKey('KEY_PASS')
+                && properties.containsKey('ALIAS_PASS')
+                && properties.containsKey('ALIAS_NAME')) {
+            android.signingConfigs.release.storeFile = file(properties['KEY_PATH'])
+            android.signingConfigs.release.storePassword = properties['KEY_PASS']
+            android.signingConfigs.release.keyAlias = properties['ALIAS_NAME']
+            android.signingConfigs.release.keyPassword = properties['ALIAS_PASS']
+
+            android.signingConfigs.debug.storeFile = file(properties['KEY_PATH'])
+            android.signingConfigs.debug.storePassword = properties['KEY_PASS']
+            android.signingConfigs.debug.keyAlias = properties['ALIAS_NAME']
+            android.signingConfigs.debug.keyPassword = properties['ALIAS_PASS']
+        } else {
+            println 'signing.properties found but some entries are missing'
+            android.buildTypes.release.signingConfig = null
+            android.buildTypes.debug.signingConfig = null
+        }
+    } else {
+        println 'signing.properties not found'
+        android.buildTypes.release.signingConfig = null
+        android.buildTypes.debug.signingConfig = null
+    }
+}
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion "29.0.3"
+    defaultConfig {
+        applicationId "jp.kshoji.blehid.sample"
+        minSdkVersion 21
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    signingConfigs {
+        release {
+            storeFile
+            storePassword
+            keyAlias
+            keyPassword
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+        debug {
+            storeFile
+            storePassword
+            keyAlias
+            keyPassword
+            v1SigningEnabled true
+            v2SigningEnabled true
+        }
+    }
+    loadSigningConfigs()
+    buildTypes {
+        debug {
+            manifestPlaceholders = ["FotricLauncher": "android.intent.category.fotric.home.debug"]
+            // debug模式下，显示log
+            buildConfigField("boolean", "LOG_DEBUG", "true")
+            //为已经存在的applicationId添加后缀
+            applicationIdSuffix ".debug"
+            // 为版本名添加后缀
+            versionNameSuffix "-d"
+            // 不开启混淆
+            minifyEnabled false
+            //不开启ZipAlign优化
+            zipAlignEnabled false
+            //不移除无用的resource文件
+            shrinkResources false
+            jniDebuggable true
+            jniDebuggable = true
+            packagingOptions {
+                doNotStrip '**/*.so'  //do not strip
+            }
+            // 使用config签名
+//            signingConfig signingConfigs.debug
+        }
+        release {
+            manifestPlaceholders = ["FotricLauncher": "android.intent.category.fotric.home"]
+            //release模式下，不显示log
+            buildConfigField("boolean", "LOG_DEBUG", "false")
+            // 不开启混淆
+            minifyEnabled false
+            //不开启ZipAlign优化
+            zipAlignEnabled false
+            //不移除无用的resource文件
+            shrinkResources false
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // 使用config签名
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+    compile project(':lib')
+}
